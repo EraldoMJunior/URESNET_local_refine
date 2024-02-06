@@ -47,11 +47,13 @@ def refine_tile(  model,  image_in, trimap_in  ):
 
     alpha = tf.keras.preprocessing.image.array_to_img(output)
 
-    background = Image.new("RGB", image_in.size, (50, 255, 50))
+    background = Image.new("RGB", image_in.size, (10, 128,  10))
+    white = Image.new("RGB", image_in.size, (255, 255, 255))
 
 
     #resize alpha to same size to image_in
     alpha = alpha.resize(image_in.size, Image.BILINEAR)
+    #result = Image.composite( image_in, background, alpha )
     result = Image.composite( image_in, background, alpha )
 
     return result
@@ -125,7 +127,7 @@ def get_tiles(image, trimap, tile_size= 128, border = 64):
 
 
 
-def main(image , trimap, border = 64 ):
+def main(image , trimap, output_filename,  border = 64 ):
     output =  image.copy()
     #check if gpu is available
     print(tf.__version__)
@@ -154,12 +156,16 @@ def main(image , trimap, border = 64 ):
             output_t_center = output_t.crop( (border,border, border+ N , border+ N ) )
             output.paste( output_t_center, rect_center )
             invocations += 1 #count invocations
-    output.save( "output.jpg" )
+    output.save( output_filename )
 
 import sys
 if __name__ == "__main__":
     image_rgb_filename = sys.argv[1]
     trimap_filename = sys.argv[2]
+
+    output_filename = "output.jpg"
+    if len(sys.argv) > 3:
+        output_filename = sys.argv[3]
 
     #try load images
     try:
@@ -169,4 +175,4 @@ if __name__ == "__main__":
         print("Error loading images")
         exit(0)
 
-    main(image , trimap )
+    main(image , trimap , output_filename)
