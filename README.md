@@ -29,7 +29,7 @@ The trimap is a fundamental step in alpha matting, where pixels in the image are
 
 2. **Inference :**
     ```bash
-    python inference.py  image_rgb.png  image_trimap.png
+    python inference.py  image_rgb.png  image_trimap.png  output.png
      ```
 
 
