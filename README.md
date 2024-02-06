@@ -1,4 +1,4 @@
-# RESUNET: Trimap Refinement for Alpha Matting
+# URESNET for Trimap Refinement  
 
 ## Project Description
 
