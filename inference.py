@@ -11,6 +11,29 @@ from PIL import Image
 from tqdm import tqdm
 
 
+def colorname_to_rgb(colorname):
+    color_table = { "black": (0,0,0), "white": (255,255,255), "red": (255,0,0), "green": (0,255,0), "blue": (0,0,255) , "yellow": (255,255,0),
+                    "cyan": (0,255,255), "magenta": (255,0,255), "gray": (128,128,128), "seagreen": (46,139,87), "darkgreen": (10,128,10),
+                     "darkgray": (169,169,169), "lightgray": (211,211,211), "orange": (255,165,0), "pink": (255,192,203),
+                     "purple": (128,0,128), "brown": (165,42,42), "olive": (128,128,0), "teal": (0,128,128), "navy": (0,0,128) ,
+                        "maroon": (128,0,0), "lime": (0,255,0), "aqua": (0,255,255), "fuchsia": (255,0,255), "silver": (192,192,192),
+                        "gold": (255,215,0), "indigo": (75,0,130), "violet": (238,130,238), "beige": (245,245,220), "tan": (210,180,140),
+                        "khaki": (240,230,140), "salmon": (250,128,114), "turquoise": (64,224,208), "lavender": (230,230,250),
+                        "plum": (221,160,221), "orchid": (218,112,214), "skyblue": (135,206,235), "chartreuse": (127,255,0),
+                        "snow": (255,250,250), "ivory": (255,255,240), "seashell": (255,245,238), "linen": (250,240,230),
+                        "oldlace": (253,245,230), "mintcream": (245,255,250), "ghostwhite": (248,248,255), "honeydew": (240,255,240),
+                        "floralwhite": (255,250,240), "aliceblue": (240,248,255), "azure": (240,255,255), "lightcyan": (224,255,255)
+            }
+    if colorname in color_table:
+         return color_table[colorname]
+    #sho error and print valid colors
+    print("Error: color not found")
+    print("Valid colors: ")
+    for k in color_table:
+        print(k)
+    return (0,0,0)
+
+
 
 def decode_img(img):
   #img = tf.image.decode_jpeg(img, channels=3) #color images
@@ -32,7 +55,7 @@ def decode_mask(mask):
   return tf.image.resize(mask, [256, 256])
 
 
-def refine_tile(  model,  image_in, trimap_in  ):
+def refine_tile(  model,  image_in, trimap_in  ,background_color ):
 
     image_tensor = decode_img(image_in)
     trimap_tensor = decode_mask(trimap_in)
@@ -47,13 +70,15 @@ def refine_tile(  model,  image_in, trimap_in  ):
 
     alpha = tf.keras.preprocessing.image.array_to_img(output)
 
-    background = Image.new("RGB", image_in.size, (10, 128,  10))
-    white = Image.new("RGB", image_in.size, (255, 255, 255))
+    rgb = colorname_to_rgb(background_color)
 
+    background = Image.new("RGB", image_in.size, rgb)
+    white = Image.new("RGB", image_in.size, (255, 255, 255))
+    black = Image.new("RGB", image_in.size, (0, 0, 0))
 
     #resize alpha to same size to image_in
     alpha = alpha.resize(image_in.size, Image.BILINEAR)
-    #result = Image.composite( image_in, background, alpha )
+    #result = Image.composite( image_in, black, alpha )
     result = Image.composite( image_in, background, alpha )
 
     return result
@@ -127,7 +152,7 @@ def get_tiles(image, trimap, tile_size= 128, border = 64):
 
 
 
-def main(image , trimap, output_filename,  border = 64 ):
+def main(image , trimap, output_filename, background_color ,  border = 64 ):
     output =  image.copy()
     #check if gpu is available
     print(tf.__version__)
@@ -135,7 +160,7 @@ def main(image , trimap, output_filename,  border = 64 ):
 
     unet = ResUnet()
     model =  unet.build_model( )
-    model.summary()
+    #model.summary()
     model.compiled_metrics == None
 
     if os.path.exists("weights/model_32.ckpt.index") :
@@ -150,7 +175,7 @@ def main(image , trimap, output_filename,  border = 64 ):
     invocations  = 0
     for i, (image_tile, trimap_tile, rect_ex,rect_center ) in tqdm( enumerate( tiles) ):
         #save image and tile
-        output_t = refine_tile( model, image_tile, trimap_tile )
+        output_t = refine_tile( model, image_tile, trimap_tile ,background_color )
 
         if output_t is not None:
             output_t_center = output_t.crop( (border,border, border+ N , border+ N ) )
@@ -158,14 +183,42 @@ def main(image , trimap, output_filename,  border = 64 ):
             invocations += 1 #count invocations
     output.save( output_filename )
 
+
+
+
+
+import argparse
 import sys
 if __name__ == "__main__":
-    image_rgb_filename = sys.argv[1]
-    trimap_filename = sys.argv[2]
+    # parse image_in mask  output  --background=colorname
+    # python  inference.py examples/00081-958218434_img.jpg examples/00081-958218434_mask_extra.png examples/00081-958218434_out.jpg  --background=black
 
-    output_filename = "output.jpg"
-    if len(sys.argv) > 3:
-        output_filename = sys.argv[3]
+    args = argparse.ArgumentParser()
+    args.add_argument("image_in", help="input image")
+    args.add_argument("mask", help="input mask")
+    args.add_argument("output", help="output image")
+    args.add_argument("--background", help="background color")
+    args = args.parse_args()
+
+    image_rgb_filename = args.image_in
+    trimap_filename = args.mask
+    output_filename = args.output
+
+    background = args.background
+
+    if (background is None ): background= "darkgreen"
+
+    if (image_rgb_filename is None or trimap_filename is None or output_filename is None):
+        print("Error: missing arguments")
+        exit(0)
+
+    #image_rgb_filename = sys.argv[1]
+    #trimap_filename = sys.argv[2]
+
+
+    # output_filename = "output.jpg"
+    # if len(sys.argv) > 3:
+    #     output_filename = sys.argv[3]
 
     #try load images
     try:
@@ -175,4 +228,4 @@ if __name__ == "__main__":
         print("Error loading images")
         exit(0)
 
-    main(image , trimap , output_filename)
+    main(image , trimap , output_filename , background)
