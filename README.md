@@ -1,4 +1,4 @@
-# URESNET for Trimap Refinement  
+# URESNET for Trimap Refinement
 
 ## Project Description
 
@@ -40,10 +40,6 @@ The trimap is a fundamental step in alpha matting, where pixels in the image are
 
 Examples of images:
 
- ![](examples/00081-958218434_img.jpg)
- ![](examples/00081-958218434_mask_extra.png)
- ![]( examples/00081-958218434_out.jpg )
-
- ![ ](examples/simg_089.jpg)
- ![ ](examples/smask_089.png)
- ![ ](examples/output_089.jpg)
+ ![](examples/00081-958218434_compose.jpg)
+ ![ ](examples/s_compose.jpg)
+ ![ ](examples/cat_compose.jpg)
